@@ -7,28 +7,28 @@
 
     <TextView
         android:id="@+id/tv_order_id"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:layout_weight="1" />
 
     <TextView
         android:id="@+id/tv_order_name"
-        android:layout_width="fill_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:layout_weight="1" />
 
     <TextView
         android:id="@+id/tv_order_number"
-        android:layout_width="fill_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:layout_weight="1" />
 
     <TextView
         android:id="@+id/tv_order_date"
-        android:layout_width="fill_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:layout_weight="1" />
@@ -36,7 +36,7 @@
 
     <Button
         android:id="@+id/bt_order_look"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="40dp"
         android:layout_gravity="center"
         android:layout_weight="1"
@@ -45,35 +45,39 @@
 
     <TextView
         android:id="@+id/tv_order_price"
-        android:layout_width="fill_parent"
+        android:layout_width="0dp"
+        android:layout_weight="1"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:visibility="gone" />
 
     <TextView
         android:id="@+id/tv_order_totalPrice"
-        android:layout_width="fill_parent"
+        android:layout_width="0dp"
+        android:layout_weight="1"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:visibility="gone" />
 
     <TextView
         android:id="@+id/tv_order_customer"
-        android:layout_width="fill_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
+        android:layout_weight="1"
         android:visibility="gone" />
 
     <TextView
         android:id="@+id/tv_order_customerPhone"
-        android:layout_width="fill_parent"
+        android:layout_width="0dp"
+        android:layout_weight="1"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:visibility="gone" />
 
     <CheckBox
         android:id="@+id/cb_box"
-        android:layout_width="fill_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:checked="false"
         android:focusable="false"

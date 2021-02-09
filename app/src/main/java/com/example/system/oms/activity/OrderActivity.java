@@ -40,12 +40,11 @@ import com.google.android.material.snackbar.Snackbar;
 
 import org.greenrobot.greendao.annotation.Id;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static android.view.View.GONE;
 
 public class OrderActivity extends AppCompatActivity implements View.OnClickListener, AdapterView.OnItemClickListener, AdapterView.OnItemLongClickListener {
 
@@ -56,7 +55,8 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
     private OrderDao dao;
     private List<Long> list;
     private Button addOrder;
-    private LinearLayout layout;
+    private LinearLayout delectLayout;
+    private LinearLayout defaultLayout;
     private Button searchButton;
     private Button selectButton;
     private Button deleteButton;
@@ -64,9 +64,13 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
     private Button canleButton;
     private RelativeLayout relativeLayout;
     private SimpleAdapter adapter;
-    private Boolean isDeleteList = false;
     private Order order;
     private Button lookButton;
+
+    private boolean isDeleteStatus = false;
+    private boolean isShowCheckBox = false;
+    private boolean isSelectAll = false;
+    private List<Long> checkBoxSelectList=new ArrayList<>();
 
 
     @Override
@@ -80,22 +84,19 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
         initListener();
         updateList();
         order = new Order();
-
-
     }
 
 
     private void initView() {
-
         addOrder = findViewById(R.id.btn_add_order);
         orderNameText = findViewById(R.id.tv_order_name);
-        layout = findViewById(R.id.showLiner);
+        delectLayout = findViewById(R.id.showLiner);
+        defaultLayout = findViewById(R.id.default_action);
         searchButton = findViewById(R.id.btn_search_order);
         selectButton = findViewById(R.id.btn_select_order);
         deleteButton = findViewById(R.id.bn_delete);
         selectAllButton = findViewById(R.id.bn_selectall);
         canleButton = findViewById(R.id.bn_canel);
-        lookButton = findViewById(R.id.bt_order_look);
         listView = findViewById(R.id.list_view);
         listView.setAdapter(adapter);
     }
@@ -132,7 +133,7 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
             @Override
             public View getView(final int position, View convertView, ViewGroup parent) {
                 View view = super.getView(position, convertView, parent);
-                lookButton = view.findViewById(R.id.bt_order_look);
+                Button lookButton = view.findViewById(R.id.bt_order_look);
                 if (lookButton != null) {
                     lookButton.setOnClickListener(new View.OnClickListener() {
                         @Override
@@ -146,6 +147,18 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
                         }
                     });
                 }
+                final CheckBox checkBox = view.findViewById(R.id.cb_box);
+                checkBox.setVisibility(isShowCheckBox ? View.VISIBLE : View.GONE);
+                checkBox.setChecked(isSelectAll);
+                checkBox.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        if (orders != null&&checkBox.isChecked()) {
+                            Long id = orders.get(position).getId();
+                            if(!checkBoxSelectList.contains(id)) checkBoxSelectList.add(id);
+                        }
+                    }
+                });
                 return view;
             }
         };
@@ -171,31 +184,32 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
             startActivity(new Intent(OrderActivity.this, OrderSearch.class));
         } else if (v == selectButton) {
             //跳转到选择界面
-            isDeleteList = !isDeleteList;
-            if (isDeleteList) {
-                checkOrAllCheckboxs(true);
-            } else {
-                showOrHiddenCheckBoxs(false);
-            }
+//            isDeleteList = !isDeleteList;
+//            if (isDeleteList) {
+//                checkOrAllCheckboxs(true);
+//            } else {
+//                showOrHiddenCheckBoxs(false);
+//            }
+
+            showOrHiddenDeleteStatus(true);
+
         } else if (v == deleteButton) {
-            // 删除数据
-            if (list.size() > 0) {
-                for (int i = 0; i < list.size(); i++) {
-                    long id = list.get(i);
-                    Log.e(TAG, "delete id=" + id);
-                    DaoManager.getTable().getOrderDao().deleteByKey(id);
-                }
-                DaoManager.getInstance().closeHelper();
-                updateList();
-            }
-        } else if (v == canleButton) {
-            // 点击取消，回到初始界面
+
+            DaoManager.getTable().getOrderDao().deleteByKeyInTx(checkBoxSelectList);
             updateList();
-            layout.setVisibility(GONE);
-            isDeleteList = !isDeleteList;
+
+        } else if (v == canleButton) {
+//            // 点击取消，回到初始界面
+//            updateList();
+//            layout.setVisibility(GONE);
+//            // isDeleteList = !isDeleteList;
+
+            showOrHiddenDeleteStatus(false);
+
         } else if (v == selectAllButton) {
             // 全选，如果当前全选按钮显示是全选，则在点击后变为取消全选，如果当前为取消全选，则在点击后变为全选
-            selectAllMethods();
+            //selectAllMethods();
+            setSelectAll();
         }
 
     }
@@ -217,10 +231,6 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
         Intent intent = new Intent();
         Log.v(TAG, "TestSQLite+++++++id" + order_id);
         switch (item_id) {
-   /* 添加
-   case R.id.add:
-    startActivity(new Intent(this, AddStudentActivity.class));
-    break;*/
             // 删除
             case R.id.delete:
                 deleteStudentInformation(order_id);
@@ -252,60 +262,63 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
         return false;
     }
 
-    // 点击一条记录是触发的事件
-    @Override
-    public void onItemClick(AdapterView<?> parent, View view, int position,
-                            long id) {
-        if (!isDeleteList) {
-            order = getOrderFromView(view, id);
-            Log.e(TAG, "student*****" + getOrderFromView(view, id));
-            Intent intent = new Intent();
-            intent.putExtra("order", String.valueOf(order));
-            intent.setClass(this, ShowOrderActivity.class);
-            this.startActivity(intent);
-        } else {
-            CheckBox box = (CheckBox) view.findViewById(R.id.cb_box);
-            box.setChecked(!box.isChecked());
-            list.add(id);
-            deleteButton.setEnabled(box.isChecked());
-        }
-    }
-
-
-    //全选或取消全选
-    private void checkOrAllCheckboxs(boolean b) {
-        int childCount = listView.getChildCount();
-        Log.e(TAG, "list child size=" + childCount);
-        for (int i = 0; i < childCount; i++) {
-            View view = listView.getChildAt(i);
-            if (view != null) {
-                CheckBox box = (CheckBox) view.findViewById(R.id.cb_box);
-                box.setChecked(!b);
-            }
-        }
-        showOrHiddenCheckBoxs(true);
-    }
-
+//    // 点击一条记录是触发的事件
+//    @Override
+//    public void onItemClick(AdapterView<?> parent, View view, int position,
+//                            long id) {
+//        if (!isDeleteList) {
+//            order = getOrderFromView(view, id);
+//            Log.e(TAG, "student*****" + getOrderFromView(view, id));
+//            Intent intent = new Intent();
+//            intent.putExtra("order", String.valueOf(order));
+//            intent.setClass(this, ShowOrderActivity.class);
+//            this.startActivity(intent);
+//        } else {
+//            CheckBox box = (CheckBox) view.findViewById(R.id.cb_box);
+//            box.setChecked(!box.isChecked());
+//            list.add(id);
+//            deleteButton.setEnabled(box.isChecked());
+//        }
+//    }
+//    //全选或取消全选
+//    private void checkOrAllCheckboxs(boolean b) {
+//        int childCount = listView.getChildCount();
+//        Log.e(TAG, "list child size=" + childCount);
+//        for (int i = 0; i < childCount; i++) {
+//            View view = listView.getChildAt(i);
+//            if (view != null) {
+//                CheckBox box = (CheckBox) view.findViewById(R.id.cb_box);
+//                box.setChecked(!b);
+//            }
+//        }
+//        showOrHiddenCheckBoxs(true);
+//    }
 
     //显示或隐藏菜单
-    private void showOrHiddenCheckBoxs(boolean b) {
-        int childCount = listView.getChildCount();
-        Log.e(TAG, "list child size=" + childCount);
-        for (int i = 0; i < childCount; i++) {
-            View view = listView.getChildAt(i);
-            if (view != null) {
-                CheckBox box = (CheckBox) view.findViewById(R.id.cb_box);
-                int visible = b ? View.VISIBLE : GONE;
-                box.setVisibility(visible);
-                layout.setVisibility(visible);
-                deleteButton.setEnabled(false);
-            }
-        }
+    private void showOrHiddenDeleteStatus(boolean isDeleteStatus) {
+//        int childCount = listView.getChildCount();
+//        Log.e(TAG, "list child size=" + childCount);
+//        for (int i = 0; i < childCount; i++) {
+//            View view = listView.getChildAt(i);
+//            if (view != null) {
+//                CheckBox box = (CheckBox) view.findViewById(R.id.cb_box);
+//                int visible = b ? View.VISIBLE : GONE;
+//                box.setVisibility(visible);
+//                layout.setVisibility(visible);
+//                deleteButton.setEnabled(false);
+//            }
+//        }
 
+        this.isDeleteStatus = isDeleteStatus;
+        this.isShowCheckBox = isDeleteStatus;
+        adapter.notifyDataSetChanged();
+        delectLayout.setVisibility(isDeleteStatus ? View.VISIBLE : View.GONE);
+        defaultLayout.setVisibility(!isDeleteStatus ? View.VISIBLE : View.GONE);
+        //deleteButton.setEnabled(isDeleteStatus);
     }
 
     // 自定义一个利用对话框形式进行数据的删除
-    private void deleteStudentInformation(final long delete_id) {
+    private void deleteStudentInformation(final Long deleteId) {
         // 利用对话框的形式删除数据
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("学员信息删除")
@@ -313,13 +326,13 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
                 .setCancelable(false)
                 .setPositiveButton("确定", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
-                        DaoManager.getTable().getOrderDao().deleteByKey(delete_id);
-                        layout.setVisibility(View.GONE);
-                        isDeleteList = !isDeleteList;
+
+                        DaoManager.getTable().getOrderDao().deleteByKey(deleteId);
+
                         updateList();
 
                         Toast.makeText(OrderActivity.this, "删除成功!",
-                                    Toast.LENGTH_LONG).show();
+                                Toast.LENGTH_LONG).show();
                     }
                 })
                 .setNegativeButton("取消", new DialogInterface.OnClickListener() {
@@ -333,26 +346,34 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
 
 
     // 点击全选事件时所触发的响应
-    private void selectAllMethods() {
-        // 全选，如果当前全选按钮显示是全选，则在点击后变为取消全选，如果当前为取消全选，则在点击后变为全选
-        if (selectAllButton.getText().toString().equals("全选")) {
-            int childCount = listView.getChildCount();
-            for (int i = 0; i < childCount; i++) {
-                View view = listView.getChildAt(i);
-                if (view != null) {
-                    CheckBox box = (CheckBox) view.findViewById(R.id.cb_box);
-                    box.setChecked(true);
-                    deleteButton.setEnabled(true);
-                    selectAllButton.setText("取消全选");
-                }
-            }
-        } else if (selectAllButton.getText().toString().equals("取消全选")) {
-            checkOrAllCheckboxs(true);
-            deleteButton.setEnabled(false);
-            selectAllButton.setText("全选");
-        }
-    }
+//    private void selectAllMethods() {
+//        // 全选，如果当前全选按钮显示是全选，则在点击后变为取消全选，如果当前为取消全选，则在点击后变为全选
+////        if (selectAllButton.getText().toString().equals("全选")) {
+////            int childCount = listView.getChildCount();
+////            for (int i = 0; i < childCount; i++) {
+////                View view = listView.getChildAt(i);
+////                if (view != null) {
+////                    CheckBox box = (CheckBox) view.findViewById(R.id.cb_box);
+////                    box.setChecked(true);
+////                    deleteButton.setEnabled(true);
+////                    selectAllButton.setText("取消全选");
+////                }
+////            }
+////        } else if (selectAllButton.getText().toString().equals("取消全选")) {
+////            //checkOrAllCheckboxs(true);
+////            setSelectAll(false);
+////        }
+//
+//        setSelectAll(true);
+//
+//    }
 
+    private void setSelectAll() {
+        this.isSelectAll = !isSelectAll;
+        adapter.notifyDataSetChanged();
+        deleteButton.setEnabled(isSelectAll);
+        selectAllButton.setText(isSelectAll ? "取消全选" : "全选");
+    }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
@@ -382,9 +403,12 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
         Long customerPhone = Long.valueOf(customerPhoneView.getText().toString());
         String data = dataView.getText().toString();
         Order order = new Order(id, name, number, price, totalPrice, customer, customerPhone, data);
-        return
-                order;
+        return order;
     }
 
 
+    @Override
+    public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+
+    }
 }
